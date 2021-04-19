@@ -16,27 +16,22 @@ passport.deserializeUser((id, done) => {
         });
 });
 
-passport.use(
+passport.use(           // Passport sets up Google OAuth Strategy for easy sign-up and login
     new GoogleStrategy({
         clientID: keys.googleClientID,
         clientSecret: keys.googleClientSecret,
         callbackURL: '/auth/google/callback',
         proxy: true
     },
-        (accessToken, refreshToken, profile, done) => {
+        async (accessToken, refreshToken, profile, done) => {
 
-            User.findOne({ googleId: profile.id })
-                .then((existingUser) => {
+            const existingUser = await User.findOne({ googleId: profile.id }) // Mongo DB looks for returning user
+            if (existingUser) {
+                return done(null, existingUser);
+            }
 
-                    if (existingUser) {
-                        done(null, existingUser);
-                    } else {
-                        new User({ googleId: profile.id })
-                            .save()
-                            .then(user => done(null, user));
-                    }
-
-                })
+            const user = await new User({ googleId: profile.id }).save() // Mongo DB creates a new user 
+            done(null, user)
         }
     )
 );
